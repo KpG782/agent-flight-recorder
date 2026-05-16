@@ -1,0 +1,23 @@
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Node / Next
+node_modules/
+.next/
+.turbo/
+dist/
+out/
+*.tsbuildinfo
+
+# Misc
+.DS_Store
+*.log

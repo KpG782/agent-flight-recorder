@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Dark forensic color tokens — specs/phase-3-ui.md §3.
+ * Forced dark: no light mode (forensic tools don't have one).
+ * --radius: 0.125rem (2px) globally; panes/timeline/prompt use rounded-none.
+ */
+:root,
+.dark {
+  --radius: 0.125rem;
+
+  --background: #06090f;
+  --surface: #0d131c;
+  --surface-raised: #131b27;
+  --border: #1e2a3a;
+  --border-strong: #2c3b4f;
+  --foreground: #e7ecf3;
+  --muted: #8a97a8;
+  --muted-dim: #5a6678;
+  --success: #22c55e;
+  --success-dim: #0e2a1a;
+  --danger: #f2384a;
+  --danger-bg: #1a0f12;
+  --warning: #e0a23c;
+  --ring: #2c3b4f;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-mono,
+.mono {
+  font-variant-numeric: tabular-nums;
+}
