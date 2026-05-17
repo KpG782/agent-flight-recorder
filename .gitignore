@@ -18,6 +18,9 @@ dist/
 out/
 *.tsbuildinfo
 
+# Local agent/editor settings (personal, not shared)
+.claude/
+
 # Misc
 .DS_Store
 *.log
