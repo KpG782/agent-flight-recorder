@@ -13,6 +13,44 @@ export function cx(...c: Array<string | false | null | undefined>): string {
   return c.filter(Boolean).join(" ");
 }
 
+/* SVG icons (24x24 viewBox, currentColor) — never emojis as UI icons. */
+function Svg(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    />
+  );
+}
+export const PlayIcon = (p: React.SVGProps<SVGSVGElement>) => (
+  <Svg {...p}>
+    <polygon points="6 4 20 12 6 20 6 4" fill="currentColor" stroke="none" />
+  </Svg>
+);
+export const PauseIcon = (p: React.SVGProps<SVGSVGElement>) => (
+  <Svg {...p}>
+    <rect x="6" y="5" width="4" height="14" fill="currentColor" stroke="none" />
+    <rect x="14" y="5" width="4" height="14" fill="currentColor" stroke="none" />
+  </Svg>
+);
+export const TargetIcon = (p: React.SVGProps<SVGSVGElement>) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="8" />
+    <line x1="12" y1="2" x2="12" y2="6" />
+    <line x1="12" y1="18" x2="12" y2="22" />
+    <line x1="2" y1="12" x2="6" y2="12" />
+    <line x1="18" y1="12" x2="22" y2="12" />
+  </Svg>
+);
+
 export function Button({
   className,
   variant = "ghost",
@@ -84,12 +122,16 @@ export function VideoPane({
   src,
   videoRef,
   onReady,
+  dim = false,
+  flash = false,
 }: {
   label: string;
   tone: "success" | "danger";
   src: string | null;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   onReady?: () => void;
+  dim?: boolean;
+  flash?: boolean;
 }) {
   const [state, setState] = React.useState<"loading" | "ready" | "error">(
     "loading",
@@ -109,6 +151,15 @@ export function VideoPane({
       >
         {label}
       </span>
+      {/* scanline instrument texture — auto-disabled for reduced motion */}
+      <div className="afr-scanline pointer-events-none absolute inset-0 z-[8]" />
+      {/* lock-on inset ring flash (storyboard §5) */}
+      {flash && (
+        <div
+          className="pointer-events-none absolute inset-0 z-[9] animate-[afrflash_220ms_ease-out]"
+          style={{ boxShadow: "inset 0 0 0 1px var(--danger)" }}
+        />
+      )}
       {state === "loading" && src && (
         <div className="absolute inset-0 z-[5] animate-pulse bg-surface-raised/60" />
       )}
@@ -124,7 +175,11 @@ export function VideoPane({
           preload="metadata"
           playsInline
           muted
-          className="h-full w-full object-contain"
+          aria-label={`${label} video`}
+          className={cx(
+            "h-full w-full object-contain transition-opacity duration-200 ease-out",
+            dim ? "opacity-90" : "opacity-100",
+          )}
           onCanPlay={() => {
             setState("ready");
             onReady?.();

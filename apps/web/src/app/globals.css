@@ -43,3 +43,59 @@ body {
 .mono {
   font-variant-numeric: tabular-nums;
 }
+
+/* Native range thumb/track styled as a forensic playhead. */
+input[type="range"]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Scanline texture on video panes — 3% opacity, motion-gated.
+   Default off; only enabled when the user has no reduced-motion preference. */
+.afr-scanline {
+  background: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .afr-scanline {
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(231, 236, 243, 0.03) 0px,
+      rgba(231, 236, 243, 0.03) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
+}
+
+/* Lock-on inset ring flash (storyboard §5). */
+@keyframes afrflash {
+  0% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Marker grow-in (storyboard §3): scaleY 0.6→1, opacity 0→1. */
+@keyframes afrmarkerin {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scaleY(1);
+  }
+}
+.afr-marker-in {
+  animation: afrmarkerin 180ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .afr-marker-in {
+    animation: none;
+  }
+}

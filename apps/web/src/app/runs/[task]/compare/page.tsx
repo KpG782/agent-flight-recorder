@@ -20,7 +20,16 @@ import {
   explainUrl,
 } from "@/lib/api";
 import { fmtTimecode } from "@/lib/format";
-import { Badge, Button, Input, VideoPane, cx } from "@/components/forensic";
+import {
+  Badge,
+  Button,
+  Input,
+  PauseIcon,
+  PlayIcon,
+  TargetIcon,
+  VideoPane,
+  cx,
+} from "@/components/forensic";
 
 type Status = "idle" | "tracing" | "resolved" | "scrubbing" | "locked";
 
@@ -53,11 +62,15 @@ export default function ComparePage() {
   const [railOpen, setRailOpen] = React.useState(true);
   const [events, setEvents] = React.useState<WsEventFrame[]>([]);
   const [markerFlare, setMarkerFlare] = React.useState(false);
+  const [playing, setPlaying] = React.useState(false);
 
   const failRef = React.useRef<HTMLVideoElement | null>(null);
   const successRef = React.useRef<HTMLVideoElement | null>(null);
   const esRef = React.useRef<EventSource | null>(null);
   const promptRef = React.useRef<HTMLInputElement | null>(null);
+  const rafRef = React.useRef<number | null>(null);
+  const paletteRef = React.useRef<HTMLButtonElement | null>(null);
+  const dim = status === "idle" || status === "tracing";
 
   const divergenceFraction = result
     ? Math.min(1, result.divergence_timestamp / RUN_DURATION_S)
@@ -82,6 +95,16 @@ export default function ComparePage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Move focus into the palette when it opens (keyboard a11y), restore to the
+  // prompt when it closes.
+  React.useEffect(() => {
+    if (paletteOpen) {
+      const t = window.setTimeout(() => paletteRef.current?.focus(), 0);
+      return () => window.clearTimeout(t);
+    }
+    promptRef.current?.focus();
+  }, [paletteOpen]);
 
   // WS event rail (best-effort; truth is the webhook path). Never throw.
   React.useEffect(() => {
@@ -139,8 +162,69 @@ export default function ComparePage() {
 
   function lockOn() {
     setStatus("locked");
+    setPlaying(false);
     setMarkerFlare(true);
     window.setTimeout(() => setMarkerFlare(false), 240);
+  }
+
+  // Synced playback: both <video>s play from the current position; a rAF loop
+  // advances the shared timeline from the (primary) failed video's clock so
+  // the slider + marker track it. Roll forward from the divergence to watch
+  // failure vs. success play out (storyboard §5).
+  function pauseBoth() {
+    failRef.current?.pause();
+    successRef.current?.pause();
+    setPlaying(false);
+  }
+
+  function togglePlay() {
+    if (!result) return;
+    if (playing) {
+      pauseBoth();
+      return;
+    }
+    const f = failRef.current;
+    const s = successRef.current;
+    if (!f || !s) return;
+    void f.play().catch(() => {});
+    void s.play().catch(() => {});
+    setPlaying(true);
+  }
+
+  React.useEffect(() => {
+    if (!playing) {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      return;
+    }
+    const tick = () => {
+      const f = failRef.current;
+      if (f && Number.isFinite(f.duration) && f.duration > 0) {
+        const frac = Math.min(1, f.currentTime / f.duration);
+        setFraction(frac);
+        if (f.ended || frac >= 0.999) {
+          pauseBoth();
+          return;
+        }
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing]);
+
+  function jumpToDivergence() {
+    if (divergenceFraction === null) return;
+    pauseBoth();
+    if (prefersReducedMotion()) {
+      setFraction(divergenceFraction);
+      seekBoth(divergenceFraction);
+      lockOn();
+    } else {
+      tweenToDivergence(divergenceFraction);
+    }
   }
 
   function startExplanation(q: string) {
@@ -246,11 +330,18 @@ export default function ComparePage() {
         <div className="ml-auto flex items-center gap-3">
           <button
             onClick={() => setRailOpen((o) => !o)}
-            className="font-mono text-meta text-muted hover:text-foreground"
+            aria-pressed={railOpen}
+            className="cursor-pointer rounded-none font-mono text-meta text-muted transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {railOpen ? "hide rail" : "show rail"}
           </button>
-          <Button variant="ghost" onClick={() => setPaletteOpen(true)}>
+          <Button
+            variant="ghost"
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Open command palette"
+            aria-keyshortcuts="Meta+K Control+K"
+            className="cursor-pointer"
+          >
             <span className="rounded-none border border-border px-1 font-mono text-[10px]">
               ⌘K
             </span>
@@ -265,12 +356,16 @@ export default function ComparePage() {
           tone="danger"
           src={clipFail}
           videoRef={failRef}
+          dim={dim}
+          flash={markerFlare}
         />
         <VideoPane
           label="Successful run"
           tone="success"
           src={clipSuccess}
           videoRef={successRef}
+          dim={dim}
+          flash={markerFlare}
         />
         <aside
           className={cx(
@@ -315,10 +410,31 @@ export default function ComparePage() {
       {/* ── Divergence timeline ── */}
       <section className="relative flex flex-col justify-center border-b border-t border-border bg-surface px-4">
         <div className="flex items-center justify-between pb-2">
-          <span className="text-label uppercase tracking-[0.12em] text-muted">
-            Divergence timeline
-          </span>
-          <span className="font-mono text-ts text-muted">
+          <div className="flex items-center gap-3">
+            <span className="text-label uppercase tracking-[0.12em] text-muted">
+              Divergence timeline
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={togglePlay}
+                disabled={!result}
+                aria-label={playing ? "Pause both runs" : "Play both runs"}
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none border border-border text-muted transition-colors duration-150 hover:border-border-strong hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {playing ? <PauseIcon /> : <PlayIcon />}
+              </button>
+              <button
+                onClick={jumpToDivergence}
+                disabled={divergenceFraction === null}
+                aria-label="Jump to divergence"
+                title="Jump to divergence"
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-none border border-border text-danger transition-colors duration-150 hover:border-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <TargetIcon />
+              </button>
+            </div>
+          </div>
+          <span className="font-mono text-ts text-muted" aria-live="off">
             {fmtTimecode(currentSeconds)} / {fmtTimecode(RUN_DURATION_S)}
           </span>
         </div>
@@ -328,7 +444,8 @@ export default function ComparePage() {
           {/* divergence marker (the visual climax) */}
           {divergenceFraction !== null && (
             <div
-              className="absolute top-0 z-30 h-full w-[2px] -translate-x-1/2 bg-danger"
+              key={result?.divergence_timestamp}
+              className="afr-marker-in absolute top-0 z-30 h-full w-[2px] -translate-x-1/2 bg-danger"
               style={{
                 left: `${divergenceFraction * 100}%`,
                 boxShadow: markerFlare
@@ -351,11 +468,13 @@ export default function ComparePage() {
             value={Math.round(fraction * 1000)}
             onChange={(e) => {
               const f = Number(e.target.value) / 1000;
+              if (playing) pauseBoth();
               setStatus("scrubbing");
               setFraction(f);
               seekBoth(f);
             }}
-            aria-label="timeline scrub"
+            aria-label="Timeline scrub — seeks both runs"
+            aria-valuetext={fmtTimecode(currentSeconds)}
             className="absolute inset-0 z-20 w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-[3px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:bg-foreground"
           />
         </div>
@@ -389,10 +508,18 @@ export default function ComparePage() {
 
         <div className="mt-2 h-px bg-border" />
 
-        <div className="mt-2 max-h-[150px] overflow-y-auto">
+        <div
+          className="mt-2 max-h-[150px] overflow-y-auto"
+          aria-live="polite"
+          role="status"
+        >
           {error && (
-            <div className="rounded-none border border-danger bg-danger-bg px-3 py-2 font-mono text-ts text-danger">
+            <div
+              role="alert"
+              className="rounded-none border border-danger bg-danger-bg px-3 py-2 font-mono text-ts text-danger"
+            >
               {error}
+              <span className="ml-2 text-muted-dim">· api {API_BASE}</span>
             </div>
           )}
           {!error && status === "idle" && (
@@ -430,21 +557,26 @@ export default function ComparePage() {
           onClick={() => setPaletteOpen(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Preset forensic queries"
             className="w-[560px] max-w-[90vw] rounded-[2px] border border-border-strong bg-surface-raised"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="border-b border-border px-3 py-2 font-mono text-meta text-muted">
-              preset forensic queries
+            <div className="flex items-center justify-between border-b border-border px-3 py-2 font-mono text-meta text-muted">
+              <span>preset forensic queries</span>
+              <span className="text-muted-dim">esc to close</span>
             </div>
-            {PRESET_QUERIES.map((q) => (
+            {PRESET_QUERIES.map((q, i) => (
               <button
                 key={q}
+                ref={i === 0 ? paletteRef : undefined}
                 onClick={() => {
                   setPaletteOpen(false);
                   setQuery(q);
                   runTrace(q);
                 }}
-                className="block w-full border-b border-border/60 px-3 py-2 text-left font-mono text-ts text-foreground hover:bg-surface"
+                className="block w-full cursor-pointer border-b border-border/60 px-3 py-2 text-left font-mono text-ts text-foreground transition-colors duration-150 hover:bg-surface focus-visible:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
                 {q}
               </button>
@@ -452,11 +584,6 @@ export default function ComparePage() {
           </div>
         </div>
       )}
-
-      {/* dev affordance: API base (mono, muted) so a wrong env is obvious */}
-      <span className="pointer-events-none fixed bottom-1 right-2 font-mono text-[10px] text-muted-dim">
-        {API_BASE}
-      </span>
     </main>
   );
 }
