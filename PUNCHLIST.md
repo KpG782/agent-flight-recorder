@@ -45,6 +45,7 @@
    ⚠️ The `.env` line was fixed via tooling; **don't re-save `.env` from the
    IDE** or the stale buffer will clobber it (paste the corrected URL in the
    IDE instead, or close the file first).
+   </details>
 
 2. **Record the two real demo runs.** The clip URLs are placeholder seekable
    MP4s (Google sample videos) — the scrub / marker / explanation are all real,
