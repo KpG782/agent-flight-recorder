@@ -17,7 +17,17 @@
 
 ## 🔴 P0 — blocks the *live* path (demo is fine without these via REPLAY)
 
-1. **`DATABASE_URL` — wrong DB password (structure now fixed).**
+1. **✅ RESOLVED — `DATABASE_URL` live.** Supabase Postgres now connects via the
+   pooler; `migrations/apply.py` applied `0001_init.sql` + `0002_seed_demo.sql`
+   (runs=2, events=14, eval_cases=10). `/healthz` is all-ok with
+   `replay_mode:false`; `/compare`, `/search`, `/explain` verified end-to-end
+   against live Supabase. Root causes fixed: (a) pasted trailing label was
+   corrupting the value; (b) `asyncpg`'s DSN-string parser mishandled a
+   URL-special char in the password — `pg_pool()` now connects via explicit
+   parsed components + `statement_cache_size=0` for the PgBouncer pooler.
+   _Historical detail below, kept for reference:_
+
+   <details><summary>original diagnosis</summary>
    The DSN is now correct: pooler user `postgres.pospouafsajrwyfygbxx`, host
    `aws-1-ap-northeast-1.pooler.supabase.com:6543`, db `postgres` (a pasted
    trailing label that was corrupting the value has been stripped; `?pgbouncer=true`

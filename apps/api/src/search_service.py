@@ -32,9 +32,9 @@ def search(req: SearchRequest) -> SearchResponse:
     if run is None:
         raise LookupError(f"run {req.run_id} not found")
 
-    use_fixture = settings.REPLAY_MODE or "events" in run or store._use_fixture()  # noqa: SLF001
-
-    if use_fixture:
+    # No real VideoDB stream (replay or seeded demo run) ⇒ rank the stored
+    # events; only hit live RTStream search for a genuine captured stream.
+    if settings.REPLAY_MODE or store.is_synthetic_run(run):
         shots = _search_fixture(run, req)
     else:
         shots = _search_live(run, req)
@@ -59,6 +59,7 @@ def search(req: SearchRequest) -> SearchResponse:
 def _search_fixture(run: dict, req: SearchRequest) -> list[Shot]:
     interval = get_settings().CAPTURE_FRAME_INTERVAL_S
     events = run.get("events") or store.get_events(req.run_id)
+    clip_url = store.resolve_clip_url(run)
     ranked = sorted(
         ((sim_score(req.query, e["description"]), e) for e in events),
         key=lambda x: x[0],
@@ -74,7 +75,7 @@ def _search_fixture(run: dict, req: SearchRequest) -> list[Shot]:
                 t_end_s=t + interval,
                 score=float(s),
                 description=e["description"],
-                clip_url=run["clip_url"],
+                clip_url=clip_url,
             )
         )
     return shots

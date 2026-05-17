@@ -66,17 +66,30 @@ async def pg_pool() -> Any:
     if _pool is not None:
         return _pool
 
+    import urllib.parse as _u
+
     import asyncpg
 
     settings = get_settings()
     if not settings.DATABASE_URL:
         raise RuntimeError("DATABASE_URL is not configured")
 
+    # Parse the DSN into explicit components rather than handing the raw string
+    # to asyncpg. asyncpg's own DSN parser splits differently from urllib on
+    # URL-special characters in the password (e.g. it mis-handled this pooler
+    # password, yielding a spurious "password authentication failed"); explicit
+    # kwargs are robust against any password character.
+    _p = _u.urlparse(settings.DATABASE_URL.strip().strip('"'))
+
     # Supabase pooler runs PgBouncer in transaction mode; asyncpg must not use
     # prepared statements there (statement_cache_size=0) or it 500s with
     # "prepared statement does not exist". Harmless on a direct connection too.
     _pool = await asyncpg.create_pool(
-        dsn=settings.DATABASE_URL,
+        user=_u.unquote(_p.username or ""),
+        password=_u.unquote(_p.password or ""),
+        host=_p.hostname,
+        port=_p.port or 5432,
+        database=(_p.path or "/postgres").lstrip("/") or "postgres",
         min_size=1,
         max_size=5,
         ssl=_ssl_context(),

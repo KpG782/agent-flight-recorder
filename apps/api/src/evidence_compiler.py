@@ -42,11 +42,18 @@ def compile_clip(run: dict, divergence_ts: float, window_s: int) -> Clip:
     """Build one run's evidence clip around ``divergence_ts``."""
     settings = get_settings()
     t0 = time.perf_counter()
-    use_fixture = settings.REPLAY_MODE or "events" in run or store._use_fixture()  # noqa: SLF001
+    # Serve the placeholder/fixture clip when there is no real VideoDB stream
+    # to bound (replay, or the seeded demo runs); only call generate_stream for
+    # a genuine captured rtstream.
+    no_live_media = settings.REPLAY_MODE or store.is_synthetic_run(run)
     w_start, w_end = _window(divergence_ts, window_s)
 
-    if use_fixture:
-        clip = Clip(url=run["clip_url"], window_start_s=w_start, window_end_s=w_end)
+    if no_live_media:
+        clip = Clip(
+            url=store.resolve_clip_url(run),
+            window_start_s=w_start,
+            window_end_s=w_end,
+        )
     else:
         rtstream_id = run.get("rtstream_id")
         if not rtstream_id:

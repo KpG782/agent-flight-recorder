@@ -161,6 +161,29 @@ def get_run_pair(task_name: str) -> tuple[dict[str, Any], dict[str, Any]]:
     return success, failure
 
 
+def is_synthetic_run(run: dict[str, Any]) -> bool:
+    """True when a run has no real VideoDB media to stream — i.e. it is the
+    seeded/fixture demo data (rtstream id absent or a `rts-replay-*` stub).
+    Such runs must be served the configured placeholder clips, not a live
+    `generate_stream` call (there is nothing to generate)."""
+    rid = (run or {}).get("rtstream_id") or ""
+    return not rid or str(rid).startswith("rts-replay")
+
+
+def resolve_clip_url(run: dict[str, Any]) -> str:
+    """Clip URL for a run regardless of backing store. Fixture rows carry
+    `clip_url`; Supabase rows don't (live clips come from VideoDB) — for the
+    seeded demo runs fall back to the configured placeholder by run_status."""
+    if run.get("clip_url"):
+        return run["clip_url"]
+    s = get_settings()
+    return (
+        s.REPLAY_SUCCESS_CLIP_URL
+        if run.get("run_status") == "success"
+        else s.REPLAY_FAILURE_CLIP_URL
+    )
+
+
 def get_events(run_id: str) -> list[dict[str, Any]]:
     if _use_fixture():
         return replay_store.get_events(run_id)
