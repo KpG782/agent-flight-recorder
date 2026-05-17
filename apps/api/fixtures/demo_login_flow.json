@@ -1,0 +1,60 @@
+{
+  "_comment": "REPLAY_MODE fixture — the demo's safety net (phase-5-reliability.md). Two pre-indexed runs of the demo SaaS login flow: a success run and a failure run where the password is mistyped. First semantic divergence is the password-entry scene at t_offset_s=15. clip_url values are seekable placeholder MP4s until the two real runs are screen-captured + exported from VideoDB (see PUNCHLIST.md). Timestamps follow the 1 frame / 5s capture cadence (CAPTURE_FRAME_INTERVAL_S).",
+  "task_name": "demo_login_flow",
+  "human_divergence_s": 15.0,
+  "canonical_query": "Where did the failed run first diverge from the successful one?",
+  "runs": {
+    "success": {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "task_name": "demo_login_flow",
+      "run_status": "success",
+      "app_version": "v1",
+      "capture_session_id": "cap-replay-success",
+      "rtstream_id": "rts-replay-success-display",
+      "started_at": "2026-05-17T03:00:00Z",
+      "ended_at": "2026-05-17T03:00:30Z",
+      "clip_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+      "events": [
+        { "event_id": "evt-s-000", "t_offset_s": 0.0,  "channel": "display", "template_tag": null, "description": "Landing page of the Acme demo SaaS dashboard is shown with a prominent 'Sign in' button in the top right." },
+        { "event_id": "evt-s-005", "t_offset_s": 5.0,  "channel": "display", "template_tag": null, "description": "The login page has loaded showing an email input field and a password input field with a 'Sign in' submit button." },
+        { "event_id": "evt-s-010", "t_offset_s": 10.0, "channel": "display", "template_tag": null, "description": "The user types the email address demo@acme.test into the email field. The email field shows a valid-format checkmark." },
+        { "event_id": "evt-s-015", "t_offset_s": 15.0, "channel": "display", "template_tag": null, "description": "The user types the correct password into the password field. The password strength indicator reads 'strong' and no validation error is shown." },
+        { "event_id": "evt-s-020", "t_offset_s": 20.0, "channel": "display", "template_tag": null, "description": "The user clicks the 'Sign in' button. A brief inline spinner appears on the button." },
+        { "event_id": "evt-s-025", "t_offset_s": 25.0, "channel": "display", "template_tag": null, "description": "Authentication succeeded. The app redirects away from the login page toward the dashboard route." },
+        { "event_id": "evt-s-030", "t_offset_s": 30.0, "channel": "display", "template_tag": null, "description": "The authenticated dashboard is fully loaded showing the welcome banner 'Welcome back, Demo' and the account metrics widgets." }
+      ]
+    },
+    "failure": {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "task_name": "demo_login_flow",
+      "run_status": "failure",
+      "app_version": "v1",
+      "capture_session_id": "cap-replay-failure",
+      "rtstream_id": "rts-replay-failure-display",
+      "started_at": "2026-05-17T03:05:00Z",
+      "ended_at": "2026-05-17T03:05:30Z",
+      "clip_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+      "events": [
+        { "event_id": "evt-f-000", "t_offset_s": 0.0,  "channel": "display", "template_tag": null, "description": "Landing page of the Acme demo SaaS dashboard is shown with a prominent 'Sign in' button in the top right." },
+        { "event_id": "evt-f-005", "t_offset_s": 5.0,  "channel": "display", "template_tag": null, "description": "The login page has loaded showing an email input field and a password input field with a 'Sign in' submit button." },
+        { "event_id": "evt-f-010", "t_offset_s": 10.0, "channel": "display", "template_tag": null, "description": "The user types the email address demo@acme.test into the email field. The email field shows a valid-format checkmark." },
+        { "event_id": "evt-f-015", "t_offset_s": 15.0, "channel": "display", "template_tag": null, "description": "The user mistypes the password into the password field, entering an extra character so the value no longer matches the account credentials. No client-side error is shown yet." },
+        { "event_id": "evt-f-020", "t_offset_s": 20.0, "channel": "display", "template_tag": null, "description": "The user clicks the 'Sign in' button. A brief inline spinner appears on the button." },
+        { "event_id": "evt-f-025", "t_offset_s": 25.0, "channel": "display", "template_tag": "auth_failure", "description": "Authentication failed. A red error banner reading 'Invalid email or password' appears above the form and the password field is highlighted in red." },
+        { "event_id": "evt-f-030", "t_offset_s": 30.0, "channel": "display", "template_tag": "auth_failure", "description": "The user is still on the login page. The password field has been cleared and the red 'Invalid email or password' error banner is still visible. Login did not complete." }
+      ]
+    }
+  },
+  "eval_cases": [
+    { "task_name": "demo_login_flow", "human_divergence_s": 15.0, "query_text": "where did login first go wrong", "expected_shot_ids": ["evt-f-015", "evt-f-025", "evt-f-030"], "notes": "Canonical divergence: password mistyped at t=15; auth_failure surfaces at t=25." },
+    { "task_name": "demo_login_flow", "human_divergence_s": 15.0, "query_text": "show the authentication failure", "expected_shot_ids": ["evt-f-025", "evt-f-030"], "notes": "Retrieval target = the auth_failure-tagged scenes." },
+    { "task_name": "demo_login_flow", "human_divergence_s": 15.0, "query_text": "what did the user type into the password field", "expected_shot_ids": ["evt-f-015"], "notes": "Should rank the password-entry scene first." },
+    { "task_name": "demo_login_flow", "human_divergence_s": 15.0, "query_text": "when did the invalid password error banner appear", "expected_shot_ids": ["evt-f-025", "evt-f-030"], "notes": "Invalid-credentials banner scenes." },
+    { "task_name": "demo_login_flow", "human_divergence_s": 15.0, "query_text": "find the moment the password was mistyped", "expected_shot_ids": ["evt-f-015"], "notes": "Stemmed match mistyped→mistype." },
+    { "task_name": "demo_login_flow", "human_divergence_s": 15.0, "query_text": "is the user still on the login page at the end", "expected_shot_ids": ["evt-f-030"], "notes": "Final stuck state." },
+    { "task_name": "demo_login_flow", "human_divergence_s": 15.0, "query_text": "show the red error banner above the form", "expected_shot_ids": ["evt-f-025", "evt-f-030"], "notes": "Error banner visible scenes." },
+    { "task_name": "demo_login_flow", "human_divergence_s": 15.0, "query_text": "where was the email address entered", "expected_shot_ids": ["evt-f-010"], "notes": "Email-entry scene." },
+    { "task_name": "demo_login_flow", "human_divergence_s": 15.0, "query_text": "when was the sign in button clicked", "expected_shot_ids": ["evt-f-020"], "notes": "Submit click scene." },
+    { "task_name": "demo_login_flow", "human_divergence_s": 15.0, "query_text": "what is the final state of the failed run", "expected_shot_ids": ["evt-f-030"], "notes": "Terminal failed scene." }
+  ]
+}

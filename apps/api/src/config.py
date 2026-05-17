@@ -59,6 +59,28 @@ class Settings(BaseSettings):
     DEMO_TASK_NAME: str = "demo_login_flow"
     CAPTURE_FRAME_INTERVAL_S: int = 5
 
+    # ── Replay fallback (the demo's safety net) ──
+    # REPLAY_MODE serves a fully pre-indexed run pair from a local JSON fixture
+    # so the killshot demo has ZERO external dependencies (no VideoDB live, no
+    # Supabase, no network) — "the demo cannot fail" (phase-5-reliability.md).
+    # The fixture also seeds Supabase via migrations/0002 when the DB is live.
+    REPLAY_FIXTURE_PATH: str = ""  # default resolved to apps/api/fixtures/demo_login_flow.json
+    # Placeholder clip URLs (seekable public MP4s) until the two real demo runs
+    # are screen-captured + exported from VideoDB (see PUNCHLIST.md).
+    REPLAY_SUCCESS_CLIP_URL: str = (
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4"
+    )
+    REPLAY_FAILURE_CLIP_URL: str = (
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
+    )
+    # Divergence detection: first aligned scene pair whose semantic similarity
+    # drops below this is "where it first diverged" (memory_router).
+    MEMORY_DIVERGENCE_THRESHOLD: float = 0.6
+
+    # When the live Supabase Postgres is unreachable (e.g. DATABASE_URL not yet
+    # fixed), allow the fixture to back read paths so the build stays runnable.
+    ALLOW_FIXTURE_FALLBACK: bool = True
+
     # ── Web (browser-exposed; carried for completeness) ──
     NEXT_PUBLIC_API_BASE_URL: str = "http://localhost:8000"
     NEXT_PUBLIC_WS_URL: str = "ws://localhost:8000/ws"

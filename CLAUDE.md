@@ -54,4 +54,13 @@ Ask before: adding any dependency outside the stack, changing the killshot UX, s
 
 ## Commands
 
-None yet — nothing is scaffolded. Once the Turborepo exists, document the actual build/lint/test/dev commands here (expect Turborepo task runners for `apps/web`, and uvicorn + pytest for `apps/api`; eval suite lives in `apps/api/evals/`).
+- **API (demo path):** `cd apps/api && REPLAY_MODE=true .venv/bin/python -m uvicorn src.main:app --port 8000`
+- **API import/smoke:** `cd apps/api && .venv/bin/python -c "import src.main"`
+- **Eval suite:** `cd apps/api && REPLAY_MODE=true .venv/bin/python -m src.incident_evaluator` → `apps/api/evals/results.md`
+- **Migrations (needs working DATABASE_URL):** `cd apps/api && .venv/bin/python migrations/apply.py`
+- **Web dev:** `cd apps/web && pnpm dev` (http://localhost:3000 → routes to the killshot)
+- **Web build / typecheck:** `cd apps/web && node_modules/.bin/next build` · `node_modules/.bin/tsc --noEmit -p tsconfig.json`
+- **Regenerate seed from fixture:** the generator is inline; `migrations/0002_seed_demo.sql` is GENERATED from `apps/api/fixtures/demo_login_flow.json` — keep them in sync.
+
+Build state: Waves 1–4 + polish complete, verified in `REPLAY_MODE`. Open
+human items are in `PUNCHLIST.md`.

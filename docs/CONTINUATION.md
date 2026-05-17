@@ -1,5 +1,10 @@
 # Continuation — Agent Flight Recorder (resume here)
 
+> ⚠️ **SUPERSEDED 2026-05-17 by the autonomous build.** Waves 1–4 + demo
+> polish are complete and verified in `REPLAY_MODE`. The current handoff is
+> **`/PUNCHLIST.md`** (read that first), then `/README.md`. The text below is
+> the pre-build state, kept for history only.
+
 > Handoff written 2026-05-17. Read this + `docs/PLAN.md` first to resume.
 > Hackathon deadline: **2026-05-18, 12:30 PM Manila**. Solo build.
 

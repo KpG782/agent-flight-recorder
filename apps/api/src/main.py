@@ -13,6 +13,7 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .clients import redis_client, supabase_client, videodb_client
 from .config import get_settings
@@ -42,6 +43,15 @@ app = FastAPI(
     version="0.1.0",
     description="Forensic black-box recorder for agent/app runs (VideoDB hackathon).",
     lifespan=lifespan,
+)
+
+# Local demo: Next.js on :3000 calls this API on :8000. Permissive CORS is
+# acceptable for a localhost hackathon demo (no credentialed cross-site auth).
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 for router in ALL_ROUTERS:
