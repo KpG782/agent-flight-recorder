@@ -17,14 +17,24 @@
 
 ## 🔴 P0 — blocks the *live* path (demo is fine without these via REPLAY)
 
-1. **Fix `DATABASE_URL`.** Direct Postgres auth fails:
-   `password authentication failed for user "postgres"`. The REST client
-   (service-role) works, but DDL needs a real Postgres connection. Use the
-   Supabase **pooler** string:
-   `postgresql://postgres.<project-ref>:<db-password>@aws-0-<region>.pooler.supabase.com:6543/postgres`
-   Then: `cd apps/api && .venv/bin/python migrations/apply.py` (applies
-   `0001_init.sql` + `0002_seed_demo.sql`). Until done, the fixture fallback
+1. **`DATABASE_URL` — wrong DB password (structure now fixed).**
+   The DSN is now correct: pooler user `postgres.pospouafsajrwyfygbxx`, host
+   `aws-1-ap-northeast-1.pooler.supabase.com:6543`, db `postgres` (a pasted
+   trailing label that was corrupting the value has been stripped; `?pgbouncer=true`
+   removed — asyncpg handles the pooler via `statement_cache_size=0` in code).
+   It still fails `password authentication failed for user "postgres"`, which
+   with a well-formed pooler DSN means **the 15-char password is wrong**
+   (Supabase's pooler always collapses the reported user to bare `postgres`).
+   **Action:** Supabase Dashboard → Project Settings → Database → either copy
+   the exact **Connection pooler** URI or **Reset database password**, then put
+   ONLY the URL on the `DATABASE_URL=` line (no quotes, no trailing label —
+   keep labels on their own `#` comment line). Then
+   `cd apps/api && .venv/bin/python migrations/apply.py` (applies
+   `0001_init.sql` + `0002_seed_demo.sql`). Until then the fixture fallback
    (`ALLOW_FIXTURE_FALLBACK`) carries every read path — demo unaffected.
+   ⚠️ The `.env` line was fixed via tooling; **don't re-save `.env` from the
+   IDE** or the stale buffer will clobber it (paste the corrected URL in the
+   IDE instead, or close the file first).
 
 2. **Record the two real demo runs.** The clip URLs are placeholder seekable
    MP4s (Google sample videos) — the scrub / marker / explanation are all real,

@@ -72,12 +72,16 @@ async def pg_pool() -> Any:
     if not settings.DATABASE_URL:
         raise RuntimeError("DATABASE_URL is not configured")
 
+    # Supabase pooler runs PgBouncer in transaction mode; asyncpg must not use
+    # prepared statements there (statement_cache_size=0) or it 500s with
+    # "prepared statement does not exist". Harmless on a direct connection too.
     _pool = await asyncpg.create_pool(
         dsn=settings.DATABASE_URL,
         min_size=1,
         max_size=5,
         ssl=_ssl_context(),
         command_timeout=15,
+        statement_cache_size=0,
     )
     log.info("pg_pool_created")
     return _pool
